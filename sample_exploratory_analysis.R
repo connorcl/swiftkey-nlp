@@ -2,21 +2,17 @@ require(quanteda)
 require(dplyr)
 require(ggplot2)
 
-sample_tokens_2gram <- tokens_ngrams(sample_tokens_stem, 2)
-sample_tokens_3gram <- tokens_ngrams(sample_tokens_stem, 3)
+sample_tokens_2gram <- tokens_ngrams(sample_tokens, 2)
+sample_tokens_3gram <- tokens_ngrams(sample_tokens, 3)
 
 sample_dfm_2gram <- dfm(sample_tokens_2gram)
 sample_dfm_3gram <- dfm(sample_tokens_3gram)
 
-freq_df <- textstat_frequency(sample_dfm_stem) %>% mutate(feature = as.factor(feature))
+freq_df <- textstat_frequency(sample_dfm) %>% mutate(feature = as.factor(feature))
 freq_df_2gram <- textstat_frequency(sample_dfm_2gram) %>% mutate(feature = as.factor(feature))
 freq_df_3gram <- textstat_frequency(sample_dfm_3gram) %>% mutate(feature = as.factor(feature))
 
-tokens <- nfeat(sample_dfm_stem)
-tokens_ge2 <- nrow(freq_df %>% select(feature, frequency) %>% filter(frequency >= 2))
-tokens_ge3 <- nrow(freq_df %>% select(feature, frequency) %>% filter(frequency >= 3))
-
-freq_df_ge3 <- freq_df %>% select(feature, frequency) %>% filter(frequency >= 3)
+tokens <- nfeat(sample_dfm)
 
 textplot_wordcloud(sample_dfm, max_words = 100)
 
@@ -71,10 +67,10 @@ ggplot(freq_3gram_ge50) +
   geom_col(fill='steelblue4') +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-total_tokens <- sum(ntoken(sample_dfm_stem))
-total_features <- nfeat(sample_dfm_stem)
+total_tokens <- sum(ntoken(sample_dfm))
+total_features <- nfeat(sample_dfm)
 
-percentage_tokens_needed <- function(required_coverage)
+tokens_needed <- function(required_coverage)
 {
   current_feature = 0
   current_tokens = 0
@@ -84,5 +80,5 @@ percentage_tokens_needed <- function(required_coverage)
     current_tokens = current_tokens + freq_df[current_feature,]$frequency
   }
   
-  return((current_feature / total_tokens) * 100)
+  return(current_feature)
 }

@@ -11,11 +11,13 @@ profanity <- read.csv(paste(path, "profanity.csv", sep=""), sep=";", header = FA
 
 sample_tokens <- sample_corpus %>% 
   tokens(remove_punct=TRUE, remove_numbers=TRUE, remove_twitter=TRUE, remove_url=TRUE) %>%
-  tokens_select(stopwords("english"), selection='remove') %>%
   tokens_select(profanity, selection='remove') %>%
   tokens_tolower()
 
-sample_tokens_stem <- sample_tokens %>% tokens_wordstem()
+sample_dfm <- dfm(sample_tokens)
+
+features_le9 <- textstat_frequency(sample_dfm) %>% filter(frequency <= 9) %>% .$feature
+
+sample_tokens <- sample_tokens %>% tokens_select(features_le9, selection='remove')
 
 sample_dfm <- dfm(sample_tokens)
-sample_dfm_stem <- dfm(sample_tokens_stem)
