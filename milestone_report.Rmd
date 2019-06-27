@@ -1,0 +1,319 @@
+---
+title: "Data Science Capstone Milestone Report"
+author: "Connor Claypool"
+date: "27 June 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary of corpus files
+
+```{r load data, echo=FALSE, message=FALSE, warning=FALSE}
+
+# define path and generate full filenames
+path <- "~/Projects/swiftkey-nlp/data/final/en_US/"
+docs <- c("blogs", "news", "twitter")
+filenames <- sapply(docs, (function(f) { paste0(path, "en_US.", f, ".txt") }))
+# read lines of each file
+data <- sapply(filenames, readLines)
+
+```
+
+```{r calculate file statistics, echo=FALSE}
+
+library(stringi)
+
+# calculate statistics for each file
+char_count <- sapply(data, (function(c) { sum(nchar(c)) }))
+word_count <- sapply(data, (function(c) { sum(stri_stats_latex(c)[["Words"]]) }))
+line_count <- sapply(data, length)
+mean_line_chars <- char_count / line_count
+mean_line_words <- word_count / line_count
+mean_word_length <- char_count / word_count
+
+# generate data frame
+file_stats <- data.frame(document = docs, 
+                         char.count = char_count, 
+                         word.count = word_count, 
+                         line.count = line_count, 
+                         mean.line.chars = mean_line_chars, 
+                         mean.line.words = mean_line_words, 
+                         mean.word.length = mean_word_length, 
+                         row.names = NULL)
+
+# generate data frame with large numbers formatted
+file_stats_formatted <- file_stats
+file_stats_formatted$char.count <- formatC(file_stats_formatted$char.count, big.mark = ",")
+file_stats_formatted$word.count <- formatC(file_stats_formatted$word.count, big.mark = ",")
+file_stats_formatted$line.count <- formatC(file_stats_formatted$line.count, big.mark = ",") 
+
+```
+
+```{r print file statistics table, results='asis', tidy=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+kable(file_stats_formatted, caption = "Summary Statistics Calculated for Each US English Corpus File")
+```
+
+```{r plot file statistics, echo=FALSE}
+
+library(ggplot2)
+library(grid)
+library(gridExtra)
+
+char_count_plot <- ggplot(file_stats) + 
+  aes(x = document, y = char.count, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Character Counts") +
+  theme(legend.position="none")
+word_count_plot <- ggplot(file_stats) + 
+  aes(x = document, y = word.count, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Word Counts") +
+  theme(legend.position="none")
+line_count_plot <- ggplot(file_stats) + 
+  aes(x = document, y = line.count, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Line Counts") +
+  theme(legend.position="none")
+mean_line_chars_plot <- ggplot(file_stats) + 
+  aes(x = document, y = mean.line.chars, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Mean Line Lengths\n(Characters)") +
+  theme(legend.position="none")
+mean_line_words_plot <- ggplot(file_stats) + 
+  aes(x = document, y = mean.line.words, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Mean Line Lengths\n(Words)") +
+  theme(legend.position="none")
+mean_word_length_plot <- ggplot(file_stats) + 
+  aes(x = document, y = mean.word.length, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Mean Word Lengths") +
+  theme(legend.position="none")
+
+grid.arrange(char_count_plot, 
+             word_count_plot, 
+             line_count_plot, 
+             mean_line_chars_plot, 
+             mean_line_words_plot, 
+             mean_word_length_plot, 
+             ncol = 3, 
+             top="Plots of Summary Statistics Calculated for Each US English Corpus File")
+```
+
+## Exploratory Analysis
+
+### Sampling the Data
+
+```{r sample data, echo=FALSE, message=FALSE, warning=FALSE}
+## sample data
+
+set.seed(1234)
+
+path <- "~/Projects/swiftkey-nlp/data/"
+
+for (doc in docs) {
+  filename <- paste0(path, "final/en_US/en_US.", doc, ".txt")
+  sample_filename <- paste0(path, "sample_", doc, ".txt")
+  
+  data <- readLines(file(filename))
+  keep <- as.logical(rbinom(data, 1, 0.01))
+  sample <- data[keep]
+  
+  writeLines(sample, file(sample_filename))
+}
+```
+
+### Processing the Sample
+
+```{r process sample data, echo=FALSE, message=FALSE, warning=FALSE}
+
+### process sample data
+
+library(readtext)
+library(quanteda)
+library(dplyr)
+
+path <- "~/Projects/swiftkey-nlp/"
+sample_data <- readtext(paste(path, "/data/*.txt", sep=""))
+
+sample_corpus <- corpus(sample_data)
+
+profanity <- read.csv(paste(path, "profanity.csv", sep=""), sep=";", header = FALSE, stringsAsFactors = FALSE)$V1
+
+sample_tokens <- sample_corpus %>% 
+  tokens(remove_punct=TRUE, remove_numbers=TRUE, remove_twitter=TRUE, remove_url=TRUE) %>%
+  tokens_select(profanity, selection='remove') %>%
+  tokens_tolower()
+
+sample_dfm <- dfm(sample_tokens)
+
+features_le4 <- textstat_frequency(sample_dfm) %>% filter(frequency <= 4) %>% .$feature
+
+sample_tokens <- sample_tokens %>% tokens_select(features_le4, selection='remove')
+
+sample_dfm <- dfm(sample_tokens)
+
+sample_tokens_ns <- sample_tokens %>% tokens_select(stopwords("english"), selection = 'remove')
+
+sample_dfm_ns <- dfm(sample_tokens_ns)
+
+```
+
+### Exploratory Graphs: No Stopwords
+
+```{r exploratory graphs stopwords removed, message=FALSE, warning=FALSE, echo=FALSE}
+### further exploratory analysis: stopwords removed
+
+sample_tokens_2gram_ns <- tokens_ngrams(sample_tokens_ns, 2)
+sample_tokens_3gram_ns <- tokens_ngrams(sample_tokens_ns, 3)
+
+sample_dfm_2gram_ns <- dfm(sample_tokens_2gram_ns)
+sample_dfm_3gram_ns <- dfm(sample_tokens_3gram_ns)
+
+freq_df_ns <- textstat_frequency(sample_dfm_ns) %>% mutate(feature = as.factor(feature))
+freq_df_2gram_ns <- textstat_frequency(sample_dfm_2gram_ns) %>% mutate(feature = as.factor(feature))
+freq_df_3gram_ns <- textstat_frequency(sample_dfm_3gram_ns) %>% mutate(feature = as.factor(feature))
+
+tokens_ns <- nfeat(sample_dfm_ns)
+
+textplot_wordcloud(sample_dfm_ns, max_words = 100)
+
+freq_top30_ns <- freq_df_ns %>% slice(1:30)
+
+ggplot(freq_top30_ns) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Top 30 1-grams by frequency") +
+  xlab("feature (1-gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
+
+freq_2gram_top30_ns <- freq_df_2gram_ns %>% slice(1:30)
+
+ggplot(freq_2gram_top30_ns) + 
+  aes(x = reorder(feature, frequency), y = frequency) +
+  ggtitle("Top 30 2-grams by frequency") +
+  xlab("feature (2-gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
+
+freq_3gram_top30_ns <- freq_df_3gram_ns %>% slice(1:30)
+
+ggplot(freq_3gram_top30_ns) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Top 30 3-grams by frequency") +
+  xlab("feature (3-gram)") +
+  geom_col(fill='darkred') + 
+  coord_flip()
+
+total_tokens_ns <- sum(ntoken(sample_dfm_ns))
+total_features_ns <- nfeat(sample_dfm_ns)
+```
+
+### Exploratory Graphs: Stopwords Included
+
+```{r exploratory graphs stopwords included, message=FALSE, warning=FALSE, echo=FALSE}
+### further exploratory analysis
+
+sample_tokens_2gram <- tokens_ngrams(sample_tokens, 2)
+sample_tokens_3gram <- tokens_ngrams(sample_tokens, 3)
+
+sample_dfm_2gram <- dfm(sample_tokens_2gram)
+sample_dfm_3gram <- dfm(sample_tokens_3gram)
+
+freq_df <- textstat_frequency(sample_dfm) %>% mutate(feature = as.factor(feature))
+freq_df_2gram <- textstat_frequency(sample_dfm_2gram) %>% mutate(feature = as.factor(feature))
+freq_df_3gram <- textstat_frequency(sample_dfm_3gram) %>% mutate(feature = as.factor(feature))
+
+tokens <- nfeat(sample_dfm)
+
+textplot_wordcloud(sample_dfm, max_words = 100, min_size=1)
+
+freq_top30 <- freq_df %>% slice(1:30)
+
+ggplot(freq_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Top 30 1-grams by frequency") +
+  xlab("feature (1-gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
+
+freq_2gram_top30 <- freq_df_2gram %>% slice(1:30)
+
+ggplot(freq_2gram_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) +
+  ggtitle("Top 30 2-grams by frequency") +
+  xlab("feature (2-gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
+
+freq_3gram_top30 <- freq_df_3gram %>% slice(1:30)
+
+ggplot(freq_3gram_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Top 30 3-grams by frequency") +
+  xlab("feature (3-gram)") +
+  geom_col(fill='darkred') + 
+  coord_flip()
+```
+
+```{r coverage calculations, message=FALSE, warning=FALSE, echo=FALSE}
+
+total_tokens <- sum(ntoken(sample_dfm))
+total_features <- nfeat(sample_dfm)
+
+features_needed <- function(required_coverage)
+{
+  current_feature = 0
+  current_tokens = 0
+  
+  while (current_tokens < total_tokens * required_coverage) {
+    current_feature = current_feature + 1
+    current_tokens = current_tokens + freq_df[current_feature,]$frequency
+  }
+  
+  return(current_feature)
+}
+
+coverages <- c(0.5, 0.9, 0.99, 0.999)
+required_features <- sapply(coverages, features_needed) / total_features
+t <- data.frame(coverages, required_features)
+
+kable(t)
+
+coverages <- seq(0, 1, 0.01)
+required_features <- sapply(coverages, features_needed) / total_features
+t <- data.frame(coverages, required_features)
+
+ggplot(t) + aes(x = coverages, y = required_features) + geom_line()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
