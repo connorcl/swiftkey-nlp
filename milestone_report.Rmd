@@ -1,17 +1,19 @@
 ---
 title: "Data Science Capstone Milestone Report"
 author: "Connor Claypool"
-date: "27 June 2019"
+date: "30 June 2019"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, cache = TRUE)
 ```
 
-## Summary of corpus files
+# 1. Summary of Corpus Files
 
-```{r load data, echo=FALSE, message=FALSE, warning=FALSE}
+The given dataset is comprised of three English language files, each containing textual data from either blogs, news sources or Twitter. The documentation provided with the dataset states that each line of each file represents a separate entry (e.g. a sentence, paragraph, or Tweet). Table 1 provides some descriptive statistics with respect to each of these files, while Figure 1 represents these summary statistics visually. Observations based on these statistics include that the Twitter file is smaller than the others in terms of characters and words, but much longer in terms of lines. This makes sense considering the average line length for the Twitter file is much lower than for the others. Additionally, the news dataset has the longest average word length, while the Twitter dataset has the shortest.
+
+```{r load data}
 
 # define path and generate full filenames
 path <- "~/Projects/swiftkey-nlp/data/final/en_US/"
@@ -22,47 +24,56 @@ data <- sapply(filenames, readLines)
 
 ```
 
-```{r calculate file statistics, echo=FALSE}
+```{r calculate file statistics}
 
 library(stringi)
 
 # calculate statistics for each file
-char_count <- sapply(data, (function(c) { sum(nchar(c)) }))
-word_count <- sapply(data, (function(c) { sum(stri_stats_latex(c)[["Words"]]) }))
-line_count <- sapply(data, length)
-mean_line_chars <- char_count / line_count
-mean_line_words <- word_count / line_count
-mean_word_length <- char_count / word_count
+char_counts <- sapply(data, (function(c) { sum(nchar(c)) }))
+word_counts <- sapply(data, (function(c) { sum(stri_stats_latex(c)[["Words"]]) }))
+line_counts <- sapply(data, length)
+mean_line_chars <- char_counts / line_counts
+mean_line_words <- word_counts / line_counts
+mean_word_length <- char_counts / word_counts
 
 # generate data frame
-file_stats <- data.frame(document = docs, 
-                         char.count = char_count, 
-                         word.count = word_count, 
-                         line.count = line_count, 
-                         mean.line.chars = mean_line_chars, 
+file_stats <- data.frame(document = docs,
+                         char.count = char_counts, 
+                         word.count = word_counts, 
+                         line.count = line_counts,
+                         mean.line.chars = mean_line_chars,
                          mean.line.words = mean_line_words, 
-                         mean.word.length = mean_word_length, 
+                         mean.word.length = mean_word_length,
                          row.names = NULL)
 
-# generate data frame with large numbers formatted
-file_stats_formatted <- file_stats
-file_stats_formatted$char.count <- formatC(file_stats_formatted$char.count, big.mark = ",")
-file_stats_formatted$word.count <- formatC(file_stats_formatted$word.count, big.mark = ",")
-file_stats_formatted$line.count <- formatC(file_stats_formatted$line.count, big.mark = ",") 
-
 ```
 
-```{r print file statistics table, results='asis', tidy=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+```{r print file statistics table, results='asis', tidy=FALSE}
 library(knitr)
-kable(file_stats_formatted, caption = "Summary Statistics Calculated for Each US English Corpus File")
+
+# generate column names for table
+file_stats_table_col_names <- c("Document",
+                                "Character Count",
+                               "Word Count",
+                               "Line Count",
+                               "Mean Line Length (Characters)",
+                               "Mean Line Length (Words)",
+                               "Mean Word Length")
+
+# generate table
+kable(file_stats, 
+      caption = "Table 1: Summary Statistics Calculated for Each US English Corpus File", 
+      format.args = list(big.mark=","), 
+      col.names = file_stats_table_col_names)
 ```
 
-```{r plot file statistics, echo=FALSE}
+```{r plot file statistics}
 
 library(ggplot2)
 library(grid)
 library(gridExtra)
 
+# barplot of character counts
 char_count_plot <- ggplot(file_stats) + 
   aes(x = document, y = char.count, fill = document) + 
   geom_bar(stat = "identity") +
@@ -70,6 +81,7 @@ char_count_plot <- ggplot(file_stats) +
   ylab("") + 
   ggtitle("Character Counts") +
   theme(legend.position="none")
+# barplot of word counts
 word_count_plot <- ggplot(file_stats) + 
   aes(x = document, y = word.count, fill = document) + 
   geom_bar(stat = "identity") +
@@ -77,6 +89,7 @@ word_count_plot <- ggplot(file_stats) +
   ylab("") + 
   ggtitle("Word Counts") +
   theme(legend.position="none")
+# barplot of line counts
 line_count_plot <- ggplot(file_stats) + 
   aes(x = document, y = line.count, fill = document) + 
   geom_bar(stat = "identity") +
@@ -84,6 +97,7 @@ line_count_plot <- ggplot(file_stats) +
   ylab("") + 
   ggtitle("Line Counts") +
   theme(legend.position="none")
+# barplot of mean line lengths (characters)
 mean_line_chars_plot <- ggplot(file_stats) + 
   aes(x = document, y = mean.line.chars, fill = document) + 
   geom_bar(stat = "identity") +
@@ -91,6 +105,7 @@ mean_line_chars_plot <- ggplot(file_stats) +
   ylab("") + 
   ggtitle("Mean Line Lengths\n(Characters)") +
   theme(legend.position="none")
+# barplot of mean line lengths (words)
 mean_line_words_plot <- ggplot(file_stats) + 
   aes(x = document, y = mean.line.words, fill = document) + 
   geom_bar(stat = "identity") +
@@ -98,6 +113,7 @@ mean_line_words_plot <- ggplot(file_stats) +
   ylab("") + 
   ggtitle("Mean Line Lengths\n(Words)") +
   theme(legend.position="none")
+# barplot of mean word lengths
 mean_word_length_plot <- ggplot(file_stats) + 
   aes(x = document, y = mean.word.length, fill = document) + 
   geom_bar(stat = "identity") +
@@ -106,6 +122,7 @@ mean_word_length_plot <- ggplot(file_stats) +
   ggtitle("Mean Word Lengths") +
   theme(legend.position="none")
 
+# arrange plots into a grid
 grid.arrange(char_count_plot, 
              word_count_plot, 
              line_count_plot, 
@@ -113,207 +130,631 @@ grid.arrange(char_count_plot,
              mean_line_words_plot, 
              mean_word_length_plot, 
              ncol = 3, 
-             top="Plots of Summary Statistics Calculated for Each US English Corpus File")
+             bottom="Figure 1: Plots of Summary Statistics Calculated for Each US English Corpus File")
 ```
 
-## Exploratory Analysis
+# 2. Data Processing and Further Exploratory Analysis
 
-### Sampling the Data
+Following these basic file statistics, a more in-depth set of exploratory analyses were performed. Due to resource constraints, futher analyses were performed on a random 1% sample of the corpus. Once sampled in this way, the data was processed as follows. The sample documents were combined into a single corpus, which was then split into tokens (words), while removing punctuation, numbers and URLs. Profanity was filtered out, all tokens were converted to lowercase, and each token which appeared fewer than five times in the corpus was removed. Additionally, the tokenized corpus was used to create two more tokenized versions of the corpus, grouping tokens into 2-grams (overlapping word pairs) and 3-grams (overlapping word triplets). For each set of tokenized data, two matrices listing each unique token and its frequency were created: one with so-called stopwords included and one without.
 
-```{r sample data, echo=FALSE, message=FALSE, warning=FALSE}
-## sample data
-
+```{r sample data}
+# set seed for reproducability
 set.seed(1234)
 
 path <- "~/Projects/swiftkey-nlp/data/"
 
 for (doc in docs) {
+  # get filename
   filename <- paste0(path, "final/en_US/en_US.", doc, ".txt")
   sample_filename <- paste0(path, "sample_", doc, ".txt")
-  
+  # read data
   data <- readLines(file(filename))
+  # generate logical vector of random 1% of lines to keep
   keep <- as.logical(rbinom(data, 1, 0.01))
+  # subset using this vector
   sample <- data[keep]
-  
+  # write samples to new files
   writeLines(sample, file(sample_filename))
 }
 ```
 
-### Processing the Sample
-
-```{r process sample data, echo=FALSE, message=FALSE, warning=FALSE}
-
-### process sample data
+```{r process sample data}
 
 library(readtext)
 library(quanteda)
 library(dplyr)
 
+# load sample data
 path <- "~/Projects/swiftkey-nlp/"
 sample_data <- readtext(paste(path, "/data/*.txt", sep=""))
-
+# create corpus
 sample_corpus <- corpus(sample_data)
-
+# load profanity dictionary
 profanity <- read.csv(paste(path, "profanity.csv", sep=""), sep=";", header = FALSE, stringsAsFactors = FALSE)$V1
-
+# generate tokens object
 sample_tokens <- sample_corpus %>% 
   tokens(remove_punct=TRUE, remove_numbers=TRUE, remove_twitter=TRUE, remove_url=TRUE) %>%
   tokens_select(profanity, selection='remove') %>%
   tokens_tolower()
-
+# generate dfm object
 sample_dfm <- dfm(sample_tokens)
-
+# generate list of features occuring 4 or fewer times
 features_le4 <- textstat_frequency(sample_dfm) %>% filter(frequency <= 4) %>% .$feature
-
+# remove these features from tokens and dfm objects
 sample_tokens <- sample_tokens %>% tokens_select(features_le4, selection='remove')
-
 sample_dfm <- dfm(sample_tokens)
+# generate 2- and 3-gram tokens objects
+sample_tokens_2gram <- tokens_ngrams(sample_tokens, 2)
+sample_tokens_3gram <- tokens_ngrams(sample_tokens, 3)
+# generate 2- and 3-gram dfm objects
+sample_dfm_2gram <- dfm(sample_tokens_2gram)
+sample_dfm_3gram <- dfm(sample_tokens_3gram)
+# generate feature frequency matrices for 1-, 2- and 3-grams
+freq_df <- textstat_frequency(sample_dfm) %>% mutate(feature = as.factor(feature))
+freq_df_2gram <- textstat_frequency(sample_dfm_2gram) %>% mutate(feature = as.factor(feature))
+freq_df_3gram <- textstat_frequency(sample_dfm_3gram) %>% mutate(feature = as.factor(feature))
 
+
+# create token and dfm objects as above but with stopwords removed
 sample_tokens_ns <- sample_tokens %>% tokens_select(stopwords("english"), selection = 'remove')
-
 sample_dfm_ns <- dfm(sample_tokens_ns)
-
-```
-
-### Exploratory Graphs: No Stopwords
-
-```{r exploratory graphs stopwords removed, message=FALSE, warning=FALSE, echo=FALSE}
-### further exploratory analysis: stopwords removed
 
 sample_tokens_2gram_ns <- tokens_ngrams(sample_tokens_ns, 2)
 sample_tokens_3gram_ns <- tokens_ngrams(sample_tokens_ns, 3)
-
 sample_dfm_2gram_ns <- dfm(sample_tokens_2gram_ns)
 sample_dfm_3gram_ns <- dfm(sample_tokens_3gram_ns)
 
 freq_df_ns <- textstat_frequency(sample_dfm_ns) %>% mutate(feature = as.factor(feature))
 freq_df_2gram_ns <- textstat_frequency(sample_dfm_2gram_ns) %>% mutate(feature = as.factor(feature))
 freq_df_3gram_ns <- textstat_frequency(sample_dfm_3gram_ns) %>% mutate(feature = as.factor(feature))
+```
 
-tokens_ns <- nfeat(sample_dfm_ns)
+One basic impact of removing stopwords can be seen in Table 2. Removing this relatively small number of unique words resulted in a large decrease in the total word count. Clearly, stopwords are used incredibly frequently, despite having relatively little importance, by definition, in terms of adding meaning to the English language.
+
+```{r feature counts}
+
+# calculate total tokens and features w/ and w/o stopwords
+total_tokens <- sum(ntoken(sample_dfm))
+total_features <- nfeat(sample_dfm)
+total_tokens_ns <- sum(ntoken(sample_dfm_ns))
+total_features_ns <- nfeat(sample_dfm_ns)
+
+# generate and display table of total tokens and features w/ and w/o stopwords
+fcount <- data.frame(stopwords.included = c("Yes", "No"), 
+                     totals = c(total_tokens, total_tokens_ns), 
+                     unique = c(total_features, total_features_ns))
+
+kable(fcount, 
+      col.names = c("Stopwords Included", "Total Tokens", "Unique Tokens"),
+      format.args = list(big.mark=","),
+      caption = "Table 2: Total and Unique Token Counts")
+
+```
+
+## 2.1. N-Gram Token Frequencies (Stopwords Removed)
+
+Figure 2 shows a wordcloud generated from the 1-gram no-stopwords frequency matrix. Figures 3, 4 and 5 display the top 30 no-stopwords 1-, 2- and 3-grams by frequency, respectively.
+
+```{r wordcloud stopwords removed}
 
 textplot_wordcloud(sample_dfm_ns, max_words = 100)
 
-freq_top30_ns <- freq_df_ns %>% slice(1:30)
+```
 
+Figure 2: Wordcloud (Stopwords Removed)
+
+```{r exploratory graphs stopwords removed}
+
+# get top 30 1-, 2- and 3-grams by frequency (no stopwords)
+freq_top30_ns <- freq_df_ns %>% slice(1:30)
+freq_2gram_top30_ns <- freq_df_2gram_ns %>% slice(1:30)
+freq_3gram_top30_ns <- freq_df_3gram_ns %>% slice(1:30)
+
+# plot top 30 1-grams
 ggplot(freq_top30_ns) + 
   aes(x = reorder(feature, frequency), y = frequency) + 
-  ggtitle("Top 30 1-grams by frequency") +
+  ggtitle("Figure 3: Top 30 1-Grams by Frequency (Stopwords Removed)") +
   xlab("feature (1-gram)") +
   geom_col(fill='darkred') +
   coord_flip()
 
-freq_2gram_top30_ns <- freq_df_2gram_ns %>% slice(1:30)
-
+# plot top 30 2-grams
 ggplot(freq_2gram_top30_ns) + 
   aes(x = reorder(feature, frequency), y = frequency) +
-  ggtitle("Top 30 2-grams by frequency") +
+  ggtitle("Figure 4: Top 30 2-Grams by Frequency (Stopwords Removed)") +
   xlab("feature (2-gram)") +
   geom_col(fill='darkred') +
   coord_flip()
 
-freq_3gram_top30_ns <- freq_df_3gram_ns %>% slice(1:30)
-
+# plot top 30 3-grams
 ggplot(freq_3gram_top30_ns) + 
   aes(x = reorder(feature, frequency), y = frequency) + 
-  ggtitle("Top 30 3-grams by frequency") +
+  ggtitle("Figure 5: Top 30 3-Grams by Frequency (Stopwords Removed)") +
   xlab("feature (3-gram)") +
   geom_col(fill='darkred') + 
   coord_flip()
-
-total_tokens_ns <- sum(ntoken(sample_dfm_ns))
-total_features_ns <- nfeat(sample_dfm_ns)
 ```
 
-### Exploratory Graphs: Stopwords Included
+## 2.2. N-Gram Token Frequencies (Stopwords Included)
 
-```{r exploratory graphs stopwords included, message=FALSE, warning=FALSE, echo=FALSE}
-### further exploratory analysis
+Figure 6 shows a wordcloud generated from the 1-gram stopword-inclusive frequency matrix. Figures 7, 8 and 9 display the top 30 stopword-inclusive 1-, 2- and 3-grams by frequency, respectively. It can be seen from these figures that stopwords are indeed used very frequently.
 
+```{r wordcloud stopwords included}
+
+textplot_wordcloud(sample_dfm, max_words = 100, min_size=1)
+
+```
+
+Figure 6: Wordcloud (Stopwords Included)
+
+```{r exploratory graphs stopwords included}
+
+# get top 30 1-, 2- and 3-grams by frequency (stopwords included)
+freq_top30 <- freq_df %>% slice(1:30)
+freq_2gram_top30 <- freq_df_2gram %>% slice(1:30)
+freq_3gram_top30 <- freq_df_3gram %>% slice(1:30)
+
+# plot top 30 1-grams
+ggplot(freq_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Figure 7: Top 30 1-grams by Frequency (Stopwords Included)") +
+  xlab("feature (1-Gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
+
+# plot top 30 2-grams
+ggplot(freq_2gram_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) +
+  ggtitle("Figure 8: Top 30 2-Grams by Frequency (Stopwords Included)") +
+  xlab("Feature (2-gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
+
+# plot top 30 3-grams
+ggplot(freq_3gram_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Figure 9: Top 30 3-Grams by Frequency (Stopwords Included)") +
+  xlab("feature (3-gram)") +
+  geom_col(fill='darkred') + 
+  coord_flip()
+```
+
+## 2.3. Relationship Between Unique Features and Corpus Coverage Levels
+
+Table 3 lists the proportion of unique tokens needed to cover 50%, 90%, 98% and 99% of the corpus with stopwords removed, while Figure 10 graphs the relationship between the coverage of the no-stopwords corpus and the proportion of unique tokens needed.
+
+```{r coverage calculations no stopwords}
+
+# calculate minimum no. of unique features required to meet required corpus coverage level
+features_needed <- function(required_coverage, freqs, total)
+{
+  current_feature <- 0
+  current_tokens <- 0
+  
+  # while tokens counted is less than required amount
+  while (current_tokens < total * required_coverage) {
+    # increment feature counter/index
+    current_feature <- current_feature + 1
+    # increment count of tokens covered based on frequency of current feature
+    current_tokens <- current_tokens + freqs[current_feature,]$frequency
+  }
+  
+  # return no. of features needed
+  return(current_feature)
+}
+
+# generate vector of coverage proportions in 0.01 increments
+coverage <- seq(0, 1, 0.01)
+# calculate required features
+features_proportion <- sapply(coverage, function(n) { features_needed(n, freq_df_ns, total_tokens_ns) }) / total_features_ns
+# generate data frame from these
+coverage_table <- data.frame(coverage, features_proportion)
+
+# display table for 50, 90, 98, 99%
+kable(coverage_table[c(51, 91, 99, 100),],
+      col.names = c("Proportion of Corpus Covered", "Proportion of Unique Features Required"),
+      caption = "Table 3: Proportions of Unique Featured Required for Certain Coverage Levels of the Corpus (Stopwords Removed)",
+      row.names = FALSE)
+
+# plot features needed against coverage level
+ggplot(coverage_table) + 
+  aes(x = coverage, y = features_proportion) + 
+  geom_line() +
+  xlab("Proportion of Corpus Covered") +
+  ylab("Proportion of Unique Features Required") +
+  ggtitle("Figure 10: Graph of Proportion of Unique Features Required\nAgainst Corpus Coverage Level (Stopwords Removed)")
+
+```
+
+Table 4 lists the proportion of unique tokens needed to cover 50%, 90%, 98% and 99% of the corpus with stopwords included, while Figure 11 graphs the relationship between the coverage of the stopwords-inclusive corpus and the proportion of unique tokens needed. Compared to the no-stopwords corpus, fewer unique features are required to meet each coverage level, due to the very high frequency of many stopwords.
+
+```{r coverage calculations}
+
+# same as previously, but with stopwords included
+coverage <- seq(0, 1, 0.01)
+features_proportion <- sapply(coverage, function(n) { features_needed(n, freq_df, total_tokens) }) / total_features
+coverage_table <- data.frame(coverage, features_proportion)
+
+kable(coverage_table[c(51, 91, 99, 100),],
+      col.names = c("Proportion of Corpus Covered", "Proportion of Unique Features Required"),
+      caption = "Table 4: Proportions of Unique Featured Required for Certain Coverage Levels of the Corpus (Stopwords Included)",
+      row.names = FALSE)
+
+ggplot(coverage_table) + 
+  aes(x = coverage, y = features_proportion) + 
+  geom_line() +
+  xlab("Proportion of Corpus Covered") +
+  ylab("Proportion of Unique Features Required") +
+  ggtitle("Figure 11: Graph of Proportion of Unique Features Required\nAgainst Corpus Coverage Level (Stopwords Included)")
+```
+
+# 3. Next Steps: Predictive Modelling
+
+The final goal for the analysis of this dataset is to build a model which can accurately predict the next word based on previous words, while minimising resource usage as the final product must function as a web app. Based on reasearch and prior experience, three methods are being considered for the modelling stage. Stupid Backoff is the simplest method, and is known to achieve high accuracy depending on the amount of data available. Kneser-Ney Smoothing is a similar but more complex method, and may yield higher accuracy. A Recurrent Neural Network (RNN)-based language model is a more advanced option which could likely achive higher accuracy than the others, but may also require more resources. Experimentation will determine which method or methods are suitable solutions for the goal in mind.
+
+# Appendix A: Source Code Listings
+
+```{r listing setup, include=FALSE, cache=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+## 1. Summary of Corpus Files
+
+```{r listing load data}
+
+# define path and generate full filenames
+path <- "~/Projects/swiftkey-nlp/data/final/en_US/"
+docs <- c("blogs", "news", "twitter")
+filenames <- sapply(docs, (function(f) { paste0(path, "en_US.", f, ".txt") }))
+# read lines of each file
+data <- sapply(filenames, readLines)
+
+```
+
+```{r listing calculate file statistics}
+
+library(stringi)
+
+# calculate statistics for each file
+char_counts <- sapply(data, (function(c) { sum(nchar(c)) }))
+word_counts <- sapply(data, (function(c) { sum(stri_stats_latex(c)[["Words"]]) }))
+line_counts <- sapply(data, length)
+mean_line_chars <- char_counts / line_counts
+mean_line_words <- word_counts / line_counts
+mean_word_length <- char_counts / word_counts
+
+# generate data frame
+file_stats <- data.frame(document = docs,
+                         char.count = char_counts, 
+                         word.count = word_counts, 
+                         line.count = line_counts,
+                         mean.line.chars = mean_line_chars,
+                         mean.line.words = mean_line_words, 
+                         mean.word.length = mean_word_length,
+                         row.names = NULL)
+
+```
+
+```{r listing print file statistics table, results='asis', tidy=FALSE}
+library(knitr)
+
+# generate column names for table
+file_stats_table_col_names <- c("Document",
+                                "Character Count",
+                               "Word Count",
+                               "Line Count",
+                               "Mean Line Length (Characters)",
+                               "Mean Line Length (Words)",
+                               "Mean Word Length")
+
+# generate table
+kable(file_stats, 
+      caption = "Table 1: Summary Statistics Calculated for Each US English Corpus File", 
+      format.args = list(big.mark=","), 
+      col.names = file_stats_table_col_names)
+```
+
+```{r listing plot file statistics}
+
+library(ggplot2)
+library(grid)
+library(gridExtra)
+
+# barplot of character counts
+char_count_plot <- ggplot(file_stats) + 
+  aes(x = document, y = char.count, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Character Counts") +
+  theme(legend.position="none")
+# barplot of word counts
+word_count_plot <- ggplot(file_stats) + 
+  aes(x = document, y = word.count, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Word Counts") +
+  theme(legend.position="none")
+# barplot of line counts
+line_count_plot <- ggplot(file_stats) + 
+  aes(x = document, y = line.count, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Line Counts") +
+  theme(legend.position="none")
+# barplot of mean line lengths (characters)
+mean_line_chars_plot <- ggplot(file_stats) + 
+  aes(x = document, y = mean.line.chars, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Mean Line Lengths\n(Characters)") +
+  theme(legend.position="none")
+# barplot of mean line lengths (words)
+mean_line_words_plot <- ggplot(file_stats) + 
+  aes(x = document, y = mean.line.words, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Mean Line Lengths\n(Words)") +
+  theme(legend.position="none")
+# barplot of mean word lengths
+mean_word_length_plot <- ggplot(file_stats) + 
+  aes(x = document, y = mean.word.length, fill = document) + 
+  geom_bar(stat = "identity") +
+  xlab("") + 
+  ylab("") + 
+  ggtitle("Mean Word Lengths") +
+  theme(legend.position="none")
+
+# arrange plots into a grid
+grid.arrange(char_count_plot, 
+             word_count_plot, 
+             line_count_plot, 
+             mean_line_chars_plot, 
+             mean_line_words_plot, 
+             mean_word_length_plot, 
+             ncol = 3, 
+             bottom="Figure 1: Plots of Summary Statistics Calculated for Each US English Corpus File")
+```
+
+## 2. Data Processing and Further Exploratory Analysis
+
+```{r listing sample data}
+# set seed for reproducability
+set.seed(1234)
+
+path <- "~/Projects/swiftkey-nlp/data/"
+
+for (doc in docs) {
+  # get filename
+  filename <- paste0(path, "final/en_US/en_US.", doc, ".txt")
+  sample_filename <- paste0(path, "sample_", doc, ".txt")
+  # read data
+  data <- readLines(file(filename))
+  # generate logical vector of random 1% of lines to keep
+  keep <- as.logical(rbinom(data, 1, 0.01))
+  # subset using this vector
+  sample <- data[keep]
+  # write samples to new files
+  writeLines(sample, file(sample_filename))
+}
+```
+
+```{r listing process sample data}
+
+library(readtext)
+library(quanteda)
+library(dplyr)
+
+# load sample data
+path <- "~/Projects/swiftkey-nlp/"
+sample_data <- readtext(paste(path, "/data/*.txt", sep=""))
+# create corpus
+sample_corpus <- corpus(sample_data)
+# load profanity dictionary
+profanity <- read.csv(paste(path, "profanity.csv", sep=""), sep=";", header = FALSE, stringsAsFactors = FALSE)$V1
+# generate tokens object
+sample_tokens <- sample_corpus %>% 
+  tokens(remove_punct=TRUE, remove_numbers=TRUE, remove_twitter=TRUE, remove_url=TRUE) %>%
+  tokens_select(profanity, selection='remove') %>%
+  tokens_tolower()
+# generate dfm object
+sample_dfm <- dfm(sample_tokens)
+# generate list of features occuring 4 or fewer times
+features_le4 <- textstat_frequency(sample_dfm) %>% filter(frequency <= 4) %>% .$feature
+# remove these features from tokens and dfm objects
+sample_tokens <- sample_tokens %>% tokens_select(features_le4, selection='remove')
+sample_dfm <- dfm(sample_tokens)
+# generate 2- and 3-gram tokens objects
 sample_tokens_2gram <- tokens_ngrams(sample_tokens, 2)
 sample_tokens_3gram <- tokens_ngrams(sample_tokens, 3)
-
+# generate 2- and 3-gram dfm objects
 sample_dfm_2gram <- dfm(sample_tokens_2gram)
 sample_dfm_3gram <- dfm(sample_tokens_3gram)
-
+# generate feature frequency matrices for 1-, 2- and 3-grams
 freq_df <- textstat_frequency(sample_dfm) %>% mutate(feature = as.factor(feature))
 freq_df_2gram <- textstat_frequency(sample_dfm_2gram) %>% mutate(feature = as.factor(feature))
 freq_df_3gram <- textstat_frequency(sample_dfm_3gram) %>% mutate(feature = as.factor(feature))
 
-tokens <- nfeat(sample_dfm)
 
-textplot_wordcloud(sample_dfm, max_words = 100, min_size=1)
+# create token and dfm objects as above but with stopwords removed
+sample_tokens_ns <- sample_tokens %>% tokens_select(stopwords("english"), selection = 'remove')
+sample_dfm_ns <- dfm(sample_tokens_ns)
 
-freq_top30 <- freq_df %>% slice(1:30)
+sample_tokens_2gram_ns <- tokens_ngrams(sample_tokens_ns, 2)
+sample_tokens_3gram_ns <- tokens_ngrams(sample_tokens_ns, 3)
+sample_dfm_2gram_ns <- dfm(sample_tokens_2gram_ns)
+sample_dfm_3gram_ns <- dfm(sample_tokens_3gram_ns)
 
-ggplot(freq_top30) + 
+freq_df_ns <- textstat_frequency(sample_dfm_ns) %>% mutate(feature = as.factor(feature))
+freq_df_2gram_ns <- textstat_frequency(sample_dfm_2gram_ns) %>% mutate(feature = as.factor(feature))
+freq_df_3gram_ns <- textstat_frequency(sample_dfm_3gram_ns) %>% mutate(feature = as.factor(feature))
+```
+
+```{r listing feature counts}
+
+# calculate total tokens and features w/ and w/o stopwords
+total_tokens <- sum(ntoken(sample_dfm))
+total_features <- nfeat(sample_dfm)
+total_tokens_ns <- sum(ntoken(sample_dfm_ns))
+total_features_ns <- nfeat(sample_dfm_ns)
+
+# generate and display table of total tokens and features w/ and w/o stopwords
+fcount <- data.frame(stopwords.included = c("Yes", "No"), 
+                     totals = c(total_tokens, total_tokens_ns), 
+                     unique = c(total_features, total_features_ns))
+
+kable(fcount, 
+      col.names = c("Stopwords Included", "Total Tokens", "Unique Tokens"),
+      format.args = list(big.mark=","),
+      caption = "Table 2: Total and Unique Token Counts")
+
+```
+
+### 2.1. N-Gram Token Frequencies (Stopwords Removed)
+
+```{r listing wordcloud stopwords removed}
+
+textplot_wordcloud(sample_dfm_ns, max_words = 100)
+
+```
+
+```{r listing exploratory graphs stopwords removed}
+
+# get top 30 1-, 2- and 3-grams by frequency (no stopwords)
+freq_top30_ns <- freq_df_ns %>% slice(1:30)
+freq_2gram_top30_ns <- freq_df_2gram_ns %>% slice(1:30)
+freq_3gram_top30_ns <- freq_df_3gram_ns %>% slice(1:30)
+
+# plot top 30 1-grams
+ggplot(freq_top30_ns) + 
   aes(x = reorder(feature, frequency), y = frequency) + 
-  ggtitle("Top 30 1-grams by frequency") +
+  ggtitle("Figure 3: Top 30 1-Grams by Frequency (Stopwords Removed)") +
   xlab("feature (1-gram)") +
   geom_col(fill='darkred') +
   coord_flip()
 
-freq_2gram_top30 <- freq_df_2gram %>% slice(1:30)
-
-ggplot(freq_2gram_top30) + 
+# plot top 30 2-grams
+ggplot(freq_2gram_top30_ns) + 
   aes(x = reorder(feature, frequency), y = frequency) +
-  ggtitle("Top 30 2-grams by frequency") +
+  ggtitle("Figure 4: Top 30 2-Grams by Frequency (Stopwords Removed)") +
   xlab("feature (2-gram)") +
   geom_col(fill='darkred') +
   coord_flip()
 
-freq_3gram_top30 <- freq_df_3gram %>% slice(1:30)
-
-ggplot(freq_3gram_top30) + 
+# plot top 30 3-grams
+ggplot(freq_3gram_top30_ns) + 
   aes(x = reorder(feature, frequency), y = frequency) + 
-  ggtitle("Top 30 3-grams by frequency") +
+  ggtitle("Figure 5: Top 30 3-Grams by Frequency (Stopwords Removed)") +
   xlab("feature (3-gram)") +
   geom_col(fill='darkred') + 
   coord_flip()
 ```
 
-```{r coverage calculations, message=FALSE, warning=FALSE, echo=FALSE}
+### 2.2. N-Gram Token Frequencies (Stopwords Included)
 
-total_tokens <- sum(ntoken(sample_dfm))
-total_features <- nfeat(sample_dfm)
+```{r listing wordcloud stopwords included}
 
-features_needed <- function(required_coverage)
-{
-  current_feature = 0
-  current_tokens = 0
-  
-  while (current_tokens < total_tokens * required_coverage) {
-    current_feature = current_feature + 1
-    current_tokens = current_tokens + freq_df[current_feature,]$frequency
-  }
-  
-  return(current_feature)
-}
-
-coverages <- c(0.5, 0.9, 0.99, 0.999)
-required_features <- sapply(coverages, features_needed) / total_features
-t <- data.frame(coverages, required_features)
-
-kable(t)
-
-coverages <- seq(0, 1, 0.01)
-required_features <- sapply(coverages, features_needed) / total_features
-t <- data.frame(coverages, required_features)
-
-ggplot(t) + aes(x = coverages, y = required_features) + geom_line()
+textplot_wordcloud(sample_dfm, max_words = 100, min_size=1)
 
 ```
 
+```{r listing exploratory graphs stopwords included}
 
+# get top 30 1-, 2- and 3-grams by frequency (stopwords included)
+freq_top30 <- freq_df %>% slice(1:30)
+freq_2gram_top30 <- freq_df_2gram %>% slice(1:30)
+freq_3gram_top30 <- freq_df_3gram %>% slice(1:30)
 
+# plot top 30 1-grams
+ggplot(freq_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Figure 7: Top 30 1-grams by Frequency (Stopwords Included)") +
+  xlab("feature (1-Gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
 
+# plot top 30 2-grams
+ggplot(freq_2gram_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) +
+  ggtitle("Figure 8: Top 30 2-Grams by Frequency (Stopwords Included)") +
+  xlab("Feature (2-gram)") +
+  geom_col(fill='darkred') +
+  coord_flip()
 
+# plot top 30 3-grams
+ggplot(freq_3gram_top30) + 
+  aes(x = reorder(feature, frequency), y = frequency) + 
+  ggtitle("Figure 9: Top 30 3-Grams by Frequency (Stopwords Included)") +
+  xlab("feature (3-gram)") +
+  geom_col(fill='darkred') + 
+  coord_flip()
+```
 
+### 2.3. Relationship Between Unique Features and Corpus Coverage Levels
 
+```{r listing coverage calculations no stopwords}
 
+# calculate minimum no. of unique features required to meet required corpus coverage level
+features_needed <- function(required_coverage, freqs, total)
+{
+  current_feature <- 0
+  current_tokens <- 0
+  
+  # while tokens counted is less than required amount
+  while (current_tokens < total * required_coverage) {
+    # increment feature counter/index
+    current_feature <- current_feature + 1
+    # increment count of tokens covered based on frequency of current feature
+    current_tokens <- current_tokens + freqs[current_feature,]$frequency
+  }
+  
+  # return no. of features needed
+  return(current_feature)
+}
 
+# generate vector of coverage proportions in 0.01 increments
+coverage <- seq(0, 1, 0.01)
+# calculate required features
+features_proportion <- sapply(coverage, function(n) { features_needed(n, freq_df_ns, total_tokens_ns) }) / total_features_ns
+# generate data frame from these
+coverage_table <- data.frame(coverage, features_proportion)
 
+# display table for 50, 90, 98, 99%
+kable(coverage_table[c(51, 91, 99, 100),],
+      col.names = c("Proportion of Corpus Covered", "Proportion of Unique Features Required"),
+      caption = "Table 3: Proportions of Unique Featured Required for Certain Coverage Levels of the Corpus (Stopwords Removed)",
+      row.names = FALSE)
 
+# plot features needed against coverage level
+ggplot(coverage_table) + 
+  aes(x = coverage, y = features_proportion) + 
+  geom_line() +
+  xlab("Proportion of Corpus Covered") +
+  ylab("Proportion of Unique Features Required") +
+  ggtitle("Figure 10: Graph of Proportion of Unique Features Required\nAgainst Corpus Coverage Level (Stopwords Removed)")
 
+```
 
+```{r listing coverage calculations}
 
+# same as previously, but with stopwords included
+coverage <- seq(0, 1, 0.01)
+features_proportion <- sapply(coverage, function(n) { features_needed(n, freq_df, total_tokens) }) / total_features
+coverage_table <- data.frame(coverage, features_proportion)
+
+kable(coverage_table[c(51, 91, 99, 100),],
+      col.names = c("Proportion of Corpus Covered", "Proportion of Unique Features Required"),
+      caption = "Table 4: Proportions of Unique Featured Required for Certain Coverage Levels of the Corpus (Stopwords Included)",
+      row.names = FALSE)
+
+ggplot(coverage_table) + 
+  aes(x = coverage, y = features_proportion) + 
+  geom_line() +
+  xlab("Proportion of Corpus Covered") +
+  ylab("Proportion of Unique Features Required") +
+  ggtitle("Figure 11: Graph of Proportion of Unique Features Required\nAgainst Corpus Coverage Level (Stopwords Included)")
+```
