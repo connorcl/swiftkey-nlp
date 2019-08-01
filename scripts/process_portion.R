@@ -1,3 +1,7 @@
+### process_portion.R - takes a portion number between 1 and 10 
+### as a command line argument and processes this tenth of the data
+
+## process command line arguments
 
 args = commandArgs(trailingOnly = TRUE)
 
@@ -8,58 +12,57 @@ if(length(args) == 0) {
   portion = max(portion, 1)
 }
 
-#print(portion)
+print(paste("Processing portion", portion))
 
-path <- "~/Projects/swiftkey-nlp/data/"
+## create portion files
+
 docs <- c("blogs", "news", "twitter")
-
+path <- "~/Projects/swiftkey-nlp/data/"
 setwd(path)
 
-# create portion files
+# initialize vector of portion filenames
+portion_filenames <- NULL
+
+# for each document (blogs, news, twitter)
 for (doc in docs) {
-  #print(doc)
-  # get filename
+  # generate filenames
   filename <- paste0(path, "final/en_US/en_US.", doc, ".txt")
-  portion_filename <- paste0(path, "portion_", as.character(portion), "_", doc, ".txt")
-  # create doc file con
+  portion_filenames[doc] <- paste0(path, "portion_", as.character(portion), "_", doc, ".txt")
+  # create document file connection
   doc_con <- file(filename)
   # read data
   data <- readLines(doc_con)
   close(doc_con)
   # split into portions
-  len <- length(data)
-  #print(paste("len", len))
-  size <- len %/% 10
-  #print(paste("size", size))
-  start <- ((portion - 1) * size) + 1
-  #print(paste("start", start))
+  data_length <- length(data)
+  portion_size <- data_length %/% 10
+  # calculate portion start based on size of first nine portions
+  portion_start <- ((portion - 1) * portion_size) + 1
+  # tenth portion may be slightly larger to cover entire document
   if (portion == 10) {
-     size <- size + (len %% 10)
+     portion_size <- portion_size + (data_length %% 10)
   }
-  #print(paste("size", size))
-  # keep relevant portion
-  data <- data[start:(start+size-1)]
-  # write result
-  portion_con <- file(portion_filename)
+  # only keep specified portion
+  data <- data[portion_start:(portion_start+portion_size-1)]
+  # write result to file
+  portion_con <- file(portion_filenames[doc])
   writeLines(data, portion_con)
   close(portion_con)
 }
 
 ## load data
 
-library(readtext)
-library(quanteda)
-library(dplyr)
+# load required libraries
+require(readtext)
+require(quanteda)
+require(dplyr)
 
-freq_dfs <- NULL
-
-# load portion
+# load portion files
 data <- readtext(paste0(path, "/portion_", portion, "_*.txt"))
 # create corpus
 portion_corpus <- corpus(data)
-print(str(portion_corpus))
 # load profanity dictionary
-profanity <- read.csv(paste(path, "../profanity.csv", sep=""), sep=";", header = FALSE, stringsAsFactors = FALSE)$V1
+profanity <- read.csv(paste0(path, "/profanity.csv"), sep=";", header = FALSE, stringsAsFactors = FALSE)$V1
 # generate tokens object
 portion_tokens <- portion_corpus %>% 
   tokens(remove_punct=TRUE, remove_numbers=TRUE, remove_twitter=TRUE, remove_url=TRUE) %>%
@@ -72,38 +75,45 @@ rm(portion_corpus)
 rm(profanity)
 gc(full=TRUE)
 
-for (i in 1:5) {
+# for each n for which ngrams will be generated
+for (n in 1:5) {
   
-  print(i)
+  print(paste0("Generating ", n, "-grams"))
   
-  if (i == 1) {
+  # generate ngrams if n > 1
+  if (n == 1) {
     portion_tokens_ng <- portion_tokens
   } else {
-    portion_tokens_ng <- tokens_ngrams(portion_tokens, i)
+    portion_tokens_ng <- tokens_ngrams(portion_tokens, n)
   }
   
+  # create document feature matrix
   portion_dfm <- dfm(portion_tokens_ng)
-  
+  # clean memory
   rm(portion_tokens_ng)
   gc(full=TRUE)
   
-  portion_dfm <- dfm_trim(portion_dfm, min_termfreq = 4, termfreq_type="count")
-  
+  # trim dfm, only keeping terms appearing at least twice
+  portion_dfm <- dfm_trim(portion_dfm, min_termfreq = 2, termfreq_type="count")
+  # clean memory
   gc(full=TRUE)
   
+  # generate ngram frequency data frame
   portion_freq_df <- textstat_frequency(portion_dfm) %>% select(feature, frequency)
-  
+  # clean memory
   rm(portion_dfm)
   gc(full=TRUE)
   
-  filename <- paste0("portion_", portion, "_", i, "gram_freq.csv")
-  
+  # generate output filename
+  filename <- paste0("portion_", portion, "_", n, "gram_freq.csv")
+  # write term frequency dataframe to output file
   write.csv(portion_freq_df, filename)
-  
+  # clean memory
   rm(portion_freq_df)
   gc(full=TRUE)
 }
 
-
-
-
+## remove portion files
+for (f in portion_filenames) {
+  file.remove(f)
+}
